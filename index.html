@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>USOTUKI</title>
+  <title>VARLET</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+JP:wght@400;700;900&display=swap');
@@ -437,47 +437,25 @@
     }
 
     .result-img-wrap {
-      display: none;
-      width: 72%;
-      max-width: 260px;
-      margin: 0 auto;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 10px 32px rgba(0,0,0,0.5);
-      border: 2px solid rgba(255,255,255,0.1);
-      flex-shrink: 0;
+      display: none; /* 画像は使わず動画に置き換え */
     }
-    .result-img-wrap.show {
-      display: block;
-      animation: resultPop 0.28s ease forwards;
-    }
-    @keyframes resultPop {
-      from { opacity: 0; transform: scale(0.97); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-    .result-img-wrap img {
-      width: 100%;
-      height: auto;
-      display: block;
-      object-fit: cover;
-    }
-    /* 結果表示中は動画エリアを隠し、画像を中央に */
+    /* 結果表示中も動画エリアを表示（短い結果ムービー用） */
     .overlay.result-mode .anim-area {
-      opacity: 0;
+      opacity: 1;
       pointer-events: none;
-      position: absolute;
+      position: relative;
       width: 100%;
-      visibility: hidden;
+      visibility: visible;
     }
     .overlay.result-mode .result-text {
-      margin-top: 0;
-      margin-bottom: 14px;
+      margin-top: 12px;
+      margin-bottom: 8px;
     }
     .overlay.result-mode .result-sub {
-      margin-top: 12px;
+      margin-top: 6px;
     }
     .overlay.result-mode .btn-continue {
-      margin-top: 18px;
+      margin-top: 16px;
     }
 
 
@@ -694,27 +672,40 @@
     /* ===== header: logo style ===== */
     header {
       background: #000;
-      text-align: left;
-      padding: 44px 24px 22px;
+      text-align: center;
+      padding: 36px 24px 22px;
+      position: relative;
+    }
+    .header-title-wrap {
+      position: relative;
+      display: inline-block;
+      text-align: center;
     }
     .header-kicker {
+      position: absolute;
+      top: -1.1em;
+      left: 0;
       font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
       font-weight: 900;
-      font-size: 0.95rem;
+      font-size: 0.72rem;
       letter-spacing: 0.08em;
       color: #c8322a;
       line-height: 1;
-      margin: 0 0 4px 0.25em;
+      margin: 0;
+      white-space: nowrap;
     }
     header h1 {
       font-family: 'Archivo Black', 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
       font-weight: 400;
-      font-size: min(14.5vw, 4.2rem);
+      font-size: min(18.5vw, 5.6rem);
       letter-spacing: -0.02em;
       line-height: 1;
       color: #c8322a;
       text-shadow: none;
       white-space: nowrap;
+      margin: 0;
+      transform: scaleY(1.2);
+      transform-origin: center center;
     }
     header .subtitle {
       font-size: 0.85rem;
@@ -724,7 +715,7 @@
       opacity: 1;
       margin-top: 12px;
     }
-    /* TOP / BGM buttons move to the top-right corner (title is left-aligned now) */
+    /* TOP / BGM buttons stay at the top corners */
     .btn-top { top: 12px; right: 14px; transform: none; }
     .btn-top:active { transform: scale(0.95); }
     .btn-mute { top: 12px; left: auto; right: 68px; transform: none; }
@@ -840,8 +831,10 @@
 <body>
   <div class="game-container" id="game">
     <header>
-      <div class="header-kicker">真偽劇場</div>
-      <h1>USOTUKI</h1>
+      <div class="header-title-wrap">
+        <div class="header-kicker">真偽劇場</div>
+        <h1>VARLET</h1>
+      </div>
       <button type="button" class="btn-mute" id="btnMute" onclick="toggleBgm()" aria-label="BGM">BGM</button>
       <button type="button" class="btn-top" id="btnTop" onclick="goToTop()">TOP</button>
     </header>
@@ -866,18 +859,18 @@
       <!-- START SCREEN -->
       <div class="screen active" id="screen-start">
         <p class="start-desc">
-          <strong>別班</strong>が「嘘か本当かわからないこと」を入力。<br>
-          <strong>工作員</strong>が見抜く！<br>
-          正解で連続ターン、間違えたら交代。<br>
-          <strong>5連続</strong>で見抜いたら<strong>即勝利</strong>！<br>
-          <strong>10ターン</strong>終了時は正解数が多い方の勝ち。<br>
+          別班プレイヤーが「真実か嘘のどちらか」を入力。<br>
+          工作員プレイヤーが真実か嘘か見抜く。<br>
+          正解で工作員役続投、間違えたら別班に交代。<br>
+          <strong>5連続</strong>見抜いたら<strong>即勝利</strong>！<br>
+          <strong>10ターン</strong>終了時は正解数が多い方の勝利。<br>
           制限時間：入力<strong id="ruleIn"></strong>秒／判断<strong id="ruleGu"></strong>秒
         </p>
 
         <div class="mode-select">
           <button type="button" class="mode-btn selected" id="modeLocal" onclick="selectMode('local')">
             <span class="mode-title">同じ端末で遊ぶ</span>
-            <span class="mode-desc">1台のスマホを交互に渡してプレイ</span>
+            <span class="mode-desc">同じ端末を交互に渡して遊ぶ</span>
           </button>
           <button type="button" class="mode-btn" id="modeOnline" onclick="selectMode('online')">
             <span class="mode-title">オンラインで遊ぶ</span>
@@ -930,7 +923,7 @@
           </div>
         </div>
 
-        <p class="footer-note" id="startFooter">同じ端末を交互に渡して遊んでね</p>
+        <p class="footer-note" id="startFooter">同じ端末を交互に渡して遊ぶ</p>
       </div>
 
       <!-- ONLINE WAITING / STATUS -->
@@ -1048,7 +1041,9 @@
     const VIDEO_FILES = {
       intro:  'intro.mp4',
       kinuso: 'kinuso.mp4',
-      kinkan: 'kinkan.mp4'
+      kinkan: 'kinkan.mp4',
+      resultCorrect: 'result-correct.mp4',
+      resultWrong:   'result-wrong.mp4'
     };
     const SEQ = {
       uso:       { key: 'kinuso', join: 11.683 },
@@ -1060,7 +1055,7 @@
 
     // 起動時に全ムービーを先読み
     function warmUpVideos() {
-      ['intro', 'kinuso', 'kinkan'].forEach(key => {
+      ['intro', 'kinuso', 'kinkan', 'resultCorrect', 'resultWrong'].forEach(key => {
         try {
           const url = videoUrl(key);
           if (!url) return;
@@ -1082,11 +1077,6 @@
 
 
     const BGM_URL = 'bgm.m4a';
-
-    const RESULT_IMG = {
-      correct: 'result-correct.jpg',
-      wrong:   'result-wrong.jpg'
-    };
 
 
     // ===== BGM =====
@@ -1155,7 +1145,7 @@
       $('btnStartLocal').classList.toggle('hidden', mode !== 'local');
       $('onlinePanel').classList.toggle('hidden', mode !== 'online');
       $('startFooter').textContent = mode === 'local'
-        ? '同じ端末を交互に渡して遊んでね'
+        ? '同じ端末を交互に渡して遊ぶ'
         : '世界中の人とマッチング、または友達とルームで遊べます';
       if (mode === 'local') {
         $('joinUI').classList.add('hidden');
@@ -1543,6 +1533,11 @@
       const iw = $('resultImgWrap');
       if (iw) iw.classList.remove('show');
       $('overlay').classList.add('active', 'result-mode');
+      // 正解扱いなので短い結果ムービーを流す
+      pauseBgm();
+      playSequence(['resultCorrect'], function () {
+        try { $('mv').pause(); } catch (e) {}
+      }, 15000);
     }
 
     function gameOverNoteHtml() {
@@ -2102,7 +2097,7 @@
       $('resultText').textContent = '';
       $('resultSub').textContent = '';
       $('btnNext').textContent = 'スキップ';
-      const _iw = $('resultImgWrap'); if (_iw) { _iw.classList.remove('show'); $('resultImg').removeAttribute('src'); }
+      const _iw = $('resultImgWrap'); if (_iw) _iw.classList.remove('show');
       $('overlay').classList.remove('result-mode'); $('overlay').classList.add('active');
       playSequence(['intro'], endIntro, 20000);
     }
@@ -2134,7 +2129,7 @@
       const resultSub = $('resultSub');
       if (resultText.textContent) return; // already shown
 
-      // 動画は一時停止のみ（最終フレームを残す）→ 結果と同時にフェード切替
+      // 長い結果ムービーを止めて、短い結果ボイスムービーに切り替え
       stopCountdownWatch();
       clearTimeout(seqTimer);
       clearTimeout(cdTimer);
@@ -2147,13 +2142,9 @@
       $('countdown').textContent = '';
       $('btnNext').textContent = isGameOver() ? '結果を見る' : '次へ';
 
+      // 画像は使わない
       const imgWrap = $('resultImgWrap');
-      const img = $('resultImg');
-      const wantSrc = lastGuessCorrect ? RESULT_IMG.correct : RESULT_IMG.wrong;
-      if (img.getAttribute('src') !== wantSrc) {
-        img.src = wantSrc;
-      }
-      img.alt = lastGuessCorrect ? '正解' : '不正解';
+      if (imgWrap) imgWrap.classList.remove('show');
 
       if (lastGuessCorrect) {
         resultText.textContent = '正解！';
@@ -2170,23 +2161,14 @@
       }
       resultSub.innerHTML += gameOverNoteHtml();
 
-      // 画像準備ができてから、1フレームで結果を出す（黒フレームを挟まない）
-      const show = () => {
-        $('overlay').classList.add('result-mode');
-        imgWrap.classList.add('show');
-        // 動画要素は少し遅らせて完全に隠す（フェードと重なる）
-        setTimeout(() => {
-          mv.classList.remove('show');
-          try { mv.removeAttribute('src'); mv.load(); } catch (e) {}
-        }, 220);
-        resumeBgm();
-      };
-      if (img.complete && img.naturalWidth > 0) {
-        requestAnimationFrame(show);
-      } else {
-        const t = setTimeout(show, 120);
-        img.onload = () => { clearTimeout(t); requestAnimationFrame(show); };
-      }
+      // 短い結果ムービーを再生（正解/最終結果 → resultCorrect、不正解 → resultWrong）
+      $('overlay').classList.add('result-mode');
+      pauseBgm();
+      const resultKey = lastGuessCorrect ? 'resultCorrect' : 'resultWrong';
+      playSequence([resultKey], function () {
+        // 短いムービー終了後は最終フレームを残し、BGMは再開しない（ユーザーが次へ押すまで）
+        try { mv.pause(); } catch (e) {}
+      }, 15000);
     }
 
     function makeGuess(guessIsTruth) {
@@ -2246,16 +2228,11 @@
       $('btnNext').textContent = 'スキップ';
       const _iw = $('resultImgWrap');
       if (_iw) _iw.classList.remove('show');
-      // 結果画像を動画再生中に先読み（終了時のロード待ちをなくす）
-      const _ri = $('resultImg');
-      if (_ri) {
-        _ri.src = lastGuessCorrect ? RESULT_IMG.correct : RESULT_IMG.wrong;
-        _ri.alt = lastGuessCorrect ? '正解' : '不正解';
-      }
       stopVideo();
 
       // 結果ムービーは正解/不正解で決まる:
       //   正解 → kinuso(私に嘘はつけないでー) / 不正解・時間切れ → kinkan(勘違いするなよ)
+      // その後 revealResult で短い結果ボイスムービーを流す
       const seq = lastGuessCorrect ? SEQ.uso : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode'); $('overlay').classList.add('active');
@@ -2265,7 +2242,7 @@
     function afterResult() {
       if (overlayMode === 'intro') { endIntro(); return; }
 
-      // カウントダウン/ムービー中に押したら、結果表示までスキップ
+      // カウントダウン/長いムービー中に押したら、結果表示（短い結果ムービー）までスキップ
       if (!$('resultText').textContent) {
         stopVideo();
         revealResult();
@@ -2275,9 +2252,10 @@
       stopVideo();
       $('overlay').classList.remove('active', 'result-mode');
       const _iw = $('resultImgWrap');
-      if (_iw) { _iw.classList.remove('show'); $('resultImg').removeAttribute('src'); }
+      if (_iw) _iw.classList.remove('show');
+      resumeBgm();
 
-      // 10ターン終了 or 3連続正解 → スコア画面
+      // 10ターン終了 or 5連続正解 → スコア画面
       if (isGameOver()) {
         showFinal();
         return;
@@ -2330,13 +2308,6 @@
     }
 
     initBgm();
-    // 結果画像を先読み
-    (function () {
-      Object.keys(RESULT_IMG).forEach(function (k) {
-        var im = new Image();
-        im.src = RESULT_IMG[k];
-      });
-    })();
     $('ruleIn').textContent = INPUT_TIME;
     $('ruleGu').textContent = GUESS_TIME;
     showScreen('screen-start');
