@@ -744,11 +744,11 @@
         <!-- Local: two names -->
         <div id="localNames" class="name-inputs">
           <div>
-            <label>プレイヤー1の名前</label>
+            <label>初期：別班プレイヤーの名前</label>
             <input type="text" id="name1" placeholder="例：太郎" maxlength="10" value="プレイヤー1">
           </div>
           <div>
-            <label>プレイヤー2の名前</label>
+            <label>初期：工作員プレイヤーの名前</label>
             <input type="text" id="name2" placeholder="例：花子" maxlength="10" value="プレイヤー2">
           </div>
         </div>
@@ -2110,9 +2110,9 @@
       }
       stopVideo();
 
-      // 結果ムービーは実際の答えで決まる:
-      //   嘘 → kinuso / 本当 → kinkan
-      const seq = isTruth ? SEQ.kanchigai : SEQ.uso;
+      // 結果ムービーは正解/不正解で決まる:
+      //   正解 → kinuso(私に嘘はつけないでー) / 不正解・時間切れ → kinkan(勘違いするなよ)
+      const seq = lastGuessCorrect ? SEQ.uso : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode'); $('overlay').classList.add('active');
       playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
