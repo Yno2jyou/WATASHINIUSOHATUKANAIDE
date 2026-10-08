@@ -859,11 +859,11 @@
       <!-- START SCREEN -->
       <div class="screen active" id="screen-start">
         <p class="start-desc">
-          別班プレイヤーが「真実か嘘のどちらか」を入力。<br>
-          工作員プレイヤーが真実か嘘か見抜く。<br>
-          正解で工作員役続投、間違えたら別班に交代。<br>
-          <strong>5連続</strong>見抜いたら<strong>即勝利</strong>！<br>
-          <strong>10ターン</strong>終了時は正解数が多い方の勝利。<br>
+          別班プレイヤーは「真実か嘘のどちらか」を入力せよ。<br>
+          工作員プレイヤーは真実か嘘か見抜け。<br>
+          正解なら工作員役を続けよ。間違えたら別班に交代せよ。<br>
+          <strong>5連続</strong>で見抜けば<strong>即勝利</strong>！<br>
+          <strong>10ターン</strong>終了時は正解数が多い方の勝利だ。<br>
           制限時間：入力<strong id="ruleIn"></strong>秒／判断<strong id="ruleGu"></strong>秒
         </p>
 
@@ -938,9 +938,9 @@
       <!-- PASS DEVICE (after start / after switch) -->
       <div class="screen" id="screen-pass">
         <div class="pass-prompt">
-          <strong id="passToName">○○</strong> さんに<br>端末を渡してください
+          <strong id="passToName">○○</strong> に<br>端末を渡せ
         </div>
-        <p class="instruction" id="passRoleText">あなたは「別班」です</p>
+        <p class="instruction" id="passRoleText">お前は「別班」だ</p>
         <button class="btn btn-primary" onclick="confirmPass()">受け取った！</button>
       </div>
 
@@ -948,7 +948,7 @@
       <div class="screen" id="screen-input">
         <div class="role-badge">別班</div>
         <div class="timer" id="timerInput"><div class="tm-label">残り <b></b>秒</div><div class="tm-track"><div class="tm-fill"></div></div></div>
-        <p class="instruction"><strong id="inputPlayerName">あなた</strong>（別班）の番です。<br>嘘か本当かわからないことを入力してね</p>
+        <p class="instruction"><strong id="inputPlayerName">あなた</strong>（別班）の番だ。<br>嘘か本当かわからないことを入力せよ</p>
         <textarea id="statementInput" placeholder="例：昨日、猫が空を飛んだのを見た" maxlength="80"></textarea>
         <p class="instruction" style="font-size:0.85rem; margin-top:4px;">これは…</p>
         <div class="truth-toggle">
@@ -961,9 +961,9 @@
       <!-- PASS TO GUESSER -->
       <div class="screen" id="screen-pass-guesser">
         <div class="pass-prompt">
-          端末を <strong id="passGuesserName">○○</strong> さんに<br>渡してください
+          端末を <strong id="passGuesserName">○○</strong> に<br>渡せ
         </div>
-        <p class="instruction">発言が送信されました。<br>工作員に渡してね！</p>
+        <p class="instruction">発言が送信された。<br>工作員に渡せ！</p>
         <button class="btn btn-primary" onclick="showGuessScreen()">受け取った！</button>
       </div>
 
@@ -971,7 +971,7 @@
       <div class="screen" id="screen-guess">
         <div class="role-badge">工作員</div>
         <div class="timer" id="timerGuess"><div class="tm-label">残り <b></b>秒</div><div class="tm-track"><div class="tm-fill"></div></div></div>
-        <p class="instruction"><strong id="guesserName">お前</strong>（工作員）の番です。<br>別班の発言の真偽はいかに……。</p>
+        <p class="instruction"><strong id="guesserName">お前</strong>（工作員）の番だ。<br>別班の発言の真偽を見抜け。</p>
         <div class="statement-display" id="statementDisplay">……</div>
         <div class="decision-buttons">
           <button class="btn btn-lie" onclick="makeGuess(false)">嘘</button>
@@ -1537,7 +1537,8 @@
       pauseBgm();
       playSequence(['resultCorrect'], function () {
         try { $('mv').pause(); } catch (e) {}
-      }, 15000);
+        resumeBgm();
+      }, 12000);
     }
 
     function gameOverNoteHtml() {
@@ -1892,7 +1893,7 @@
 
     function goToPassForSpeaker() {
       $('passToName').textContent = players[speakerIdx];
-      $('passRoleText').innerHTML = `あなたは<strong style="color:var(--gold)">別班</strong>です`;
+      $('passRoleText').innerHTML = `お前は<strong style="color:var(--gold)">別班</strong>だ`;
       showScreen('screen-pass');
     }
 
@@ -2039,48 +2040,92 @@
         mv.onerror = null;
         mv.onloadeddata = null;
         clearTimeout(seqTimer);
-        onEnd();
+        try { onEnd(); } catch (e) { console.warn(e); }
       };
       const playNow = () => {
+        if (finished) return;
         ensureInlineVideo(mv);
         const q = mv.play();
         if (q && q.catch) q.catch(() => {
           // 音声ロック時はミュートで続行（サイレントでも流れを止めない）
+          if (finished) return;
           mv.muted = true;
-          mv.play().catch(finish);
+          mv.play().catch(() => {
+            // 再生自体失敗 → 次のクリップへ
+            if (finished) return;
+            if (++qi < keys.length) loadAndPlay(qi);
+            else finish();
+          });
         });
       };
       const loadAndPlay = (idx) => {
+        if (finished) return;
         ensureInlineVideo(mv);
+        const url = videoUrl(keys[idx]);
+        if (!url) {
+          if (++qi < keys.length) loadAndPlay(qi);
+          else finish();
+          return;
+        }
+        // ハンドラを先に付けてから src をセット（空srcのloadでerrorを飛ばさない）
+        mv.onloadeddata = null;
+        mv.onerror = null;
         mv.muted = false;
-        mv.src = videoUrl(keys[idx]);
         mv.classList.add('show');
-        // ロード完了を待ってから再生 → 切替時の一瞬の黒/つぎはぎ感を軽減
+
         const start = () => {
+          if (finished) return;
           mv.onloadeddata = null;
           if (onClip) onClip(idx);
           playNow();
         };
+
+        // エラー時は次のクリップへ（ファイル欠損など）
+        mv.onerror = () => {
+          if (finished) return;
+          mv.onerror = null;
+          mv.onloadeddata = null;
+          if (++qi < keys.length) loadAndPlay(qi);
+          else finish();
+        };
+        mv.onloadeddata = start;
+
+        // src を直接セット（removeAttribute+load は空srcでerrorが飛ぶので使わない）
+        mv.src = url;
+        try { mv.load(); } catch (e) {}
+
+        // 既にバッファ済みなら即再生
         if (mv.readyState >= 2) {
           start();
         } else {
-          mv.onloadeddata = start;
-          // 万一 loadeddata が来ない場合の保険
-          setTimeout(() => { if (mv.onloadeddata) start(); }, 400);
+          // loadeddata が来ない場合の保険
+          setTimeout(() => {
+            if (finished) return;
+            if (mv.readyState >= 2) {
+              start();
+            } else if (mv.onloadeddata) {
+              // まだ開始できていない → スキップ
+              mv.onloadeddata = null;
+              mv.onerror = null;
+              if (++qi < keys.length) loadAndPlay(qi);
+              else finish();
+            }
+          }, 800);
         }
       };
+
       mv.onended = () => {
+        if (finished) return;
         if (++qi < keys.length) {
           loadAndPlay(qi);
         } else {
           finish();
         }
       };
-      mv.onerror = finish;
+
       loadAndPlay(0);
-      // Safety net in case 'ended' never fires
       clearTimeout(seqTimer);
-      seqTimer = setTimeout(finish, safetyMs);
+      seqTimer = setTimeout(finish, safetyMs || 30000);
     }
 
     // ===== Intro (冒頭) → 選択画面 =====
@@ -2098,7 +2143,9 @@
       $('resultSub').textContent = '';
       $('btnNext').textContent = 'スキップ';
       const _iw = $('resultImgWrap'); if (_iw) _iw.classList.remove('show');
-      $('overlay').classList.remove('result-mode'); $('overlay').classList.add('active');
+      $('overlay').classList.remove('result-mode');
+      $('overlay').classList.add('active');
+      pauseBgm();
       playSequence(['intro'], endIntro, 20000);
     }
 
@@ -2129,46 +2176,33 @@
       const resultSub = $('resultSub');
       if (resultText.textContent) return; // already shown
 
-      // 長い結果ムービーを止めて、短い結果ボイスムービーに切り替え
-      stopCountdownWatch();
-      clearTimeout(seqTimer);
-      clearTimeout(cdTimer);
-      const mv = $('mv');
-      mv.onended = null;
-      mv.onerror = null;
-      mv.onloadeddata = null;
-      try { mv.pause(); } catch (e) {}
-      $('countdown').classList.remove('show', 'pop');
-      $('countdown').textContent = '';
+      // 長い結果ムービーを完全停止してから短い結果ボイスへ
+      stopVideo();
       $('btnNext').textContent = isGameOver() ? '結果を見る' : '次へ';
 
-      // 画像は使わない
       const imgWrap = $('resultImgWrap');
       if (imgWrap) imgWrap.classList.remove('show');
 
       if (lastGuessCorrect) {
         resultText.textContent = '正解！';
         resultText.classList.add('correct');
-        resultSub.textContent = isTruth
-          ? '本当だったようだ、よく見抜いたな'
-          : '嘘だったようだ、よく見抜いたな';
+        resultSub.textContent = '美しき我が国を汚すものは何人たりとも許さない';
       } else {
         resultText.textContent = guessTimedOut ? '時間切れ…' : '不正解…';
         resultText.classList.add('wrong');
-        resultSub.textContent = isTruth
-          ? '本当だったようだ、しくじったな'
-          : '嘘だったようだ、しくじったな';
+        resultSub.textContent = 'それは万死に値します';
       }
       resultSub.innerHTML += gameOverNoteHtml();
 
       // 短い結果ムービーを再生（正解/最終結果 → resultCorrect、不正解 → resultWrong）
-      $('overlay').classList.add('result-mode');
+      $('overlay').classList.add('active', 'result-mode');
       pauseBgm();
       const resultKey = lastGuessCorrect ? 'resultCorrect' : 'resultWrong';
       playSequence([resultKey], function () {
-        // 短いムービー終了後は最終フレームを残し、BGMは再開しない（ユーザーが次へ押すまで）
-        try { mv.pause(); } catch (e) {}
-      }, 15000);
+        // 短いムービー終了後は最終フレームを残し、BGMを再開
+        try { $('mv').pause(); } catch (e) {}
+        resumeBgm();
+      }, 12000);
     }
 
     function makeGuess(guessIsTruth) {
@@ -2229,13 +2263,16 @@
       const _iw = $('resultImgWrap');
       if (_iw) _iw.classList.remove('show');
       stopVideo();
+      pauseBgm();
 
       // 結果ムービーは正解/不正解で決まる:
-      //   正解 → kinuso(私に嘘はつけないでー) / 不正解・時間切れ → kinkan(勘違いするなよ)
+      //   正解 → kinuso / 不正解・時間切れ → kinkan
       // その後 revealResult で短い結果ボイスムービーを流す
+      // 長いムービーが無い場合でも onerror で revealResult に進む
       const seq = lastGuessCorrect ? SEQ.uso : SEQ.kanchigai;
 
-      $('overlay').classList.remove('result-mode'); $('overlay').classList.add('active');
+      $('overlay').classList.remove('result-mode');
+      $('overlay').classList.add('active');
       playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
     }
 
