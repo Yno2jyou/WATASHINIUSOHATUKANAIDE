@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>私に嘘をつかないで</title>
+  <title>USOTUKI</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
     :root {
-      --bg: #1a1a2e;
-      --card: #16213e;
-      --accent: #e94560;
-      --gold: #f0c040;
-      --text: #eaeaea;
-      --muted: #a0a0b0;
-      --success: #2ecc71;
-      --danger: #e74c3c;
+      --bg: #000;
+      --card: #0c0c0c;
+      --accent: #c8322a;
+      --gold: #efe9d8;
+      --text: #ececec;
+      --muted: #8f8f8f;
+      --success: #efe9d8;
+      --danger: #e5483b;
     }
 
     * {
@@ -690,13 +691,157 @@
     .tm-fill { height: 100%; width: 100%; background: var(--gold); }
     .timer.urgent .tm-fill { background: var(--danger); }
     .timer.urgent .tm-label b { color: var(--danger); }
+    /* ===== header: logo style ===== */
+    header {
+      background: #000;
+      text-align: left;
+      padding: 44px 24px 22px;
+    }
+    .header-kicker {
+      font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+      font-weight: 900;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      color: #c8322a;
+      line-height: 1;
+      margin: 0 0 4px 0.25em;
+    }
+    header h1 {
+      font-family: 'Archivo Black', 'Arial Black', 'Helvetica Neue', Impact, sans-serif;
+      font-weight: 400;
+      font-size: min(14.5vw, 4.2rem);
+      letter-spacing: -0.02em;
+      line-height: 1;
+      color: #c8322a;
+      text-shadow: none;
+      white-space: nowrap;
+    }
+    header .subtitle {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #d9d9d9;
+      opacity: 1;
+      margin-top: 12px;
+    }
+    /* TOP / BGM buttons move to the top-right corner (title is left-aligned now) */
+    .btn-top { top: 12px; right: 14px; transform: none; }
+    .btn-top:active { transform: scale(0.95); }
+    .btn-mute { top: 12px; left: auto; right: 68px; transform: none; }
+    .btn-mute:active { transform: scale(0.95); }
+    /* ===== drama look: black / red / bone white ===== */
+    body {
+      background: radial-gradient(ellipse at 50% 0%, #1c1c1c 0%, #000 70%);
+      font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+    }
+    .game-container {
+      background: var(--card);
+      border-radius: 6px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    .overlay { border-radius: 6px; }
+    header { border-bottom: 2px solid var(--accent); }
+
+    .score-bar { background: #000; border-bottom: 1px solid #222; padding: 12px 20px; }
+    .score-bar .label { letter-spacing: 0.08em; }
+    .score-bar .active { color: #fff; }
+    #p1Points, #p2Points {
+      font-family: 'Archivo Black', 'Noto Sans JP', sans-serif;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .start-desc strong { color: #fff; }
+    .role-badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 0;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+    }
+    textarea, input[type="text"] {
+      background: #000;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+    }
+    textarea:focus, input[type="text"]:focus { border-color: var(--accent); }
+
+    .truth-toggle button {
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      background: #000;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+    }
+    .truth-toggle button.selected-truth {
+      border-color: var(--success);
+      background: rgba(239,233,216,0.1);
+      color: var(--success);
+    }
+    .truth-toggle button.selected-lie {
+      border-color: var(--danger);
+      background: rgba(229,72,59,0.14);
+      color: var(--danger);
+    }
+
+    .btn { border-radius: 2px; font-weight: 900; letter-spacing: 0.2em; }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: none; }
+    .btn-primary:hover { background: #d63a31; box-shadow: none; }
+    .btn-gold { background: var(--gold); color: #000; box-shadow: none; }
+    .btn-lie { background: var(--accent); color: #fff; box-shadow: none; }
+
+    .statement-display {
+      background: #000;
+      border: 1px solid #222;
+      border-left: 4px solid var(--accent);
+      border-radius: 0;
+      justify-content: flex-start;
+      text-align: left;
+      font-weight: 900;
+    }
+    .pass-prompt {
+      background: rgba(200,50,42,0.1);
+      border: 1px solid rgba(200,50,42,0.45);
+      border-radius: 2px;
+    }
+    .mode-btn {
+      border-radius: 2px;
+      border: 1px solid #2a2a2a;
+      border-left: 4px solid #2a2a2a;
+      background: #080808;
+    }
+    .mode-btn:hover, .mode-btn.selected {
+      border-color: #3a3a3a;
+      border-left-color: var(--accent);
+      background: rgba(200,50,42,0.08);
+    }
+    .room-box { background: #000; border: 1px solid #222; border-radius: 2px; }
+
+    .result-text { font-weight: 900; letter-spacing: 0.1em; }
+    .result-img-wrap { border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); }
+    .anim-area video { border-radius: 2px; }
+    .countdown {
+      font-family: 'Archivo Black', 'Noto Sans JP', sans-serif;
+      text-shadow: 0 6px 30px rgba(200,50,42,0.6);
+    }
+
+    .final-title { color: var(--accent); font-weight: 900; letter-spacing: 0.3em; }
+    .final-winner { color: #fff; font-weight: 900; text-shadow: 0 0 24px rgba(200,50,42,0.8); }
+    .final-card { background: #000; border: 1px solid #2a2a2a; border-radius: 2px; }
+    .final-card.win { border-color: var(--accent); background: rgba(200,50,42,0.12); }
+    .fc-score { font-family: 'Archivo Black', 'Noto Sans JP', sans-serif; }
+    .final-card.win .fc-score { color: #fff; }
+    .tm-fill { background: var(--gold); }
+    .timer.urgent .tm-fill { background: var(--danger); }
   </style>
 </head>
 <body>
   <div class="game-container" id="game">
     <header>
-      <h1>私に嘘をつかないで</h1>
-      <div class="subtitle">別班は嘘か、本当か......</div>
+      <div class="header-kicker">真偽劇場</div>
+      <h1>USOTUKI</h1>
       <button type="button" class="btn-mute" id="btnMute" onclick="toggleBgm()" aria-label="BGM">BGM</button>
       <button type="button" class="btn-top" id="btnTop" onclick="goToTop()">TOP</button>
     </header>
@@ -720,7 +865,6 @@
     <div class="main">
       <!-- START SCREEN -->
       <div class="screen active" id="screen-start">
-        <div class="title-big">『私に嘘をつかないで』</div>
         <p class="start-desc">
           <strong>別班</strong>が「嘘か本当かわからないこと」を入力。<br>
           <strong>工作員</strong>が見抜く！<br>
