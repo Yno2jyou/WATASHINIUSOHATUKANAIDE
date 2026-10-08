@@ -612,13 +612,91 @@
     }
     .hidden { display: none !important; }
 
+    /* ===== ending / matchmaking ===== */
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    #onlinePanel:not(.hidden) {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    .divider-text {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      margin-top: 6px;
+    }
+    .divider-text::before, .divider-text::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+    }
+    .mm-spinner {
+      width: 34px;
+      height: 34px;
+      margin: 4px auto 10px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.12);
+      border-top-color: var(--gold);
+      animation: mmspin 0.9s linear infinite;
+    }
+    @keyframes mmspin { to { transform: rotate(360deg); } }
+
+    .final-title { font-size: 1.1rem; font-weight: 800; color: var(--muted); letter-spacing: 0.1em; }
+    .final-reason { font-size: 0.82rem; color: var(--muted); text-align: center; }
+    .final-winner {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--gold);
+      text-align: center;
+      line-height: 1.35;
+      text-shadow: 0 4px 20px rgba(240,192,64,0.4);
+      animation: finalPop 0.6s ease-out;
+    }
+    @keyframes finalPop {
+      0% { transform: scale(0.6); opacity: 0; }
+      60% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+    .final-cards { display: flex; align-items: stretch; gap: 10px; width: 100%; }
+    .final-card {
+      flex: 1;
+      min-width: 0;
+      background: rgba(0,0,0,0.3);
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px 8px;
+      text-align: center;
+    }
+    .final-card.win { border-color: var(--gold); background: rgba(240,192,64,0.1); }
+    .fc-name { font-size: 0.85rem; font-weight: 700; word-break: break-all; }
+    .fc-score { font-size: 2.6rem; font-weight: 800; line-height: 1.1; margin-top: 4px; }
+    .final-card.win .fc-score { color: var(--gold); }
+    .fc-label { font-size: 0.7rem; color: var(--muted); }
+    .final-vs { align-self: center; font-weight: 800; color: var(--muted); font-size: 0.85rem; }
+    /* ===== time limit ===== */
+    .timer { width: 100%; }
+    .tm-label { text-align: center; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .tm-label b { font-size: 1.1rem; color: var(--text); }
+    .tm-track { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+    .tm-fill { height: 100%; width: 100%; background: var(--gold); }
+    .timer.urgent .tm-fill { background: var(--danger); }
+    .timer.urgent .tm-label b { color: var(--danger); }
   </style>
 </head>
 <body>
   <div class="game-container" id="game">
     <header>
       <h1>私に嘘をつかないで</h1>
-      <div class="subtitle">別班の発言の真偽はいかに……。</div>
+      <div class="subtitle">別班は嘘か、本当か......</div>
       <button type="button" class="btn-mute" id="btnMute" onclick="toggleBgm()" aria-label="BGM">BGM</button>
       <button type="button" class="btn-top" id="btnTop" onclick="goToTop()">TOP</button>
     </header>
@@ -630,8 +708,8 @@
         <span id="p1Points">0</span>
       </div>
       <div class="player">
-        <span class="label">連続正解</span>
-        <span id="streak">0</span>
+        <span class="label" id="turnLabel">ターン 1/10</span>
+        <span>連続 <span id="streak">0</span>/5</span>
       </div>
       <div class="player" id="p2Score">
         <span class="label" id="p2Label">プレイヤー2</span>
@@ -646,7 +724,10 @@
         <p class="start-desc">
           <strong>別班</strong>が「嘘か本当かわからないこと」を入力。<br>
           <strong>工作員</strong>が見抜く！<br>
-          正解で連続ターン、間違えたら交代。
+          正解で連続ターン、間違えたら交代。<br>
+          <strong>5連続</strong>で見抜いたら<strong>即勝利</strong>！<br>
+          <strong>10ターン</strong>終了時は正解数が多い方の勝ち。<br>
+          制限時間：入力<strong id="ruleIn"></strong>秒／判断<strong id="ruleGu"></strong>秒
         </p>
 
         <div class="mode-select">
@@ -655,8 +736,8 @@
             <span class="mode-desc">1台のスマホを交互に渡してプレイ</span>
           </button>
           <button type="button" class="mode-btn" id="modeOnline" onclick="selectMode('online')">
-            <span class="mode-title">別々の端末で遊ぶ</span>
-            <span class="mode-desc">ルームを作って、もう1台から参加</span>
+            <span class="mode-title">オンラインで遊ぶ</span>
+            <span class="mode-desc">世界中の人とマッチング、または友達とルーム対戦</span>
           </button>
         </div>
 
@@ -681,9 +762,16 @@
               <input type="text" id="nameOnline" placeholder="例：太郎" maxlength="10" value="">
             </div>
           </div>
-          <div style="display:flex; gap:8px; width:100%; margin-top:4px;">
-            <button class="btn btn-primary" style="flex:1" onclick="createRoom()">ルーム作成</button>
-            <button class="btn btn-gold" style="flex:1" onclick="showJoinUI()">ルームに入る</button>
+          <button class="btn btn-gold" id="btnMatch" onclick="startMatchmaking()">🌏 世界中の人とマッチング</button>
+          <div id="mmBox" class="room-box hidden" style="margin-top:0;">
+            <div class="mm-spinner" id="mmSpin"></div>
+            <div class="room-status" id="mmStatus"></div>
+            <button type="button" class="btn btn-ghost" id="mmCancel" style="margin-top:12px;padding:10px;font-size:0.9rem;" onclick="cancelMatchmaking()">キャンセル</button>
+          </div>
+          <div class="divider-text">または 友達とルームで</div>
+          <div style="display:flex; gap:8px; width:100%;">
+            <button class="btn btn-primary" id="btnCreate" style="flex:1" onclick="createRoom()">ルーム作成</button>
+            <button class="btn btn-gold" id="btnJoinShow" style="flex:1" onclick="showJoinUI()">ルームに入る</button>
           </div>
           <div id="joinUI" class="room-box hidden" style="margin-top:12px;">
             <label style="font-size:0.85rem;color:var(--muted)">ルームコード</label>
@@ -722,6 +810,7 @@
       <!-- INPUT STATEMENT -->
       <div class="screen" id="screen-input">
         <div class="role-badge">別班</div>
+        <div class="timer" id="timerInput"><div class="tm-label">残り <b></b>秒</div><div class="tm-track"><div class="tm-fill"></div></div></div>
         <p class="instruction"><strong id="inputPlayerName">あなた</strong>（別班）の番です。<br>嘘か本当かわからないことを入力してね</p>
         <textarea id="statementInput" placeholder="例：昨日、猫が空を飛んだのを見た" maxlength="80"></textarea>
         <p class="instruction" style="font-size:0.85rem; margin-top:4px;">これは…</p>
@@ -744,12 +833,36 @@
       <!-- GUESS SCREEN -->
       <div class="screen" id="screen-guess">
         <div class="role-badge">工作員</div>
+        <div class="timer" id="timerGuess"><div class="tm-label">残り <b></b>秒</div><div class="tm-track"><div class="tm-fill"></div></div></div>
         <p class="instruction"><strong id="guesserName">お前</strong>（工作員）の番です。<br>別班の発言の真偽はいかに……。</p>
         <div class="statement-display" id="statementDisplay">……</div>
         <div class="decision-buttons">
           <button class="btn btn-lie" onclick="makeGuess(false)">嘘</button>
           <button class="btn btn-gold" onclick="makeGuess(true)">本当</button>
         </div>
+      </div>
+
+      <!-- FINAL SCORE -->
+      <div class="screen" id="screen-final">
+        <div class="final-title">ゲーム終了</div>
+        <div class="final-reason" id="finalReason"></div>
+        <div class="final-winner" id="finalWinner"></div>
+        <div class="final-cards">
+          <div class="final-card" id="fc0">
+            <div class="fc-name" id="fcName0">-</div>
+            <div class="fc-score" id="fcScore0">0</div>
+            <div class="fc-label">正解</div>
+          </div>
+          <div class="final-vs">VS</div>
+          <div class="final-card" id="fc1">
+            <div class="fc-name" id="fcName1">-</div>
+            <div class="fc-score" id="fcScore1">0</div>
+            <div class="fc-label">正解</div>
+          </div>
+        </div>
+        <div class="room-status" id="finalNote"></div>
+        <button class="btn btn-primary" id="btnRematch" onclick="rematch()">もう一度遊ぶ</button>
+        <button class="btn btn-ghost" onclick="goToTop()">TOPへ戻る</button>
       </div>
 
       <!-- RESULT / ANIMATION handled by overlay -->
@@ -890,6 +1003,7 @@
     let guestNextReady = false;
 
     function selectMode(mode) {
+      if (mode === 'local' && mm) cancelMatchmaking();
       playMode = mode;
       $('modeLocal').classList.toggle('selected', mode === 'local');
       $('modeOnline').classList.toggle('selected', mode === 'online');
@@ -898,7 +1012,7 @@
       $('onlinePanel').classList.toggle('hidden', mode !== 'online');
       $('startFooter').textContent = mode === 'local'
         ? '同じ端末を交互に渡して遊んでね'
-        : 'それぞれの端末から同じルームに入ってね';
+        : '世界中の人とマッチング、または友達とルームで遊べます';
       if (mode === 'local') {
         $('joinUI').classList.add('hidden');
         $('hostRoomUI').classList.add('hidden');
@@ -912,7 +1026,7 @@
 
     function setupConnection(c) {
       conn = c;
-      conn.on('open', () => {
+      const onOpen = () => {
         onlineConnected = true;
         const st = $('roomStatus');
         if (st) { st.textContent = '接続しました！'; st.className = 'room-status ok'; }
@@ -921,19 +1035,35 @@
         // Exchange names
         const myName = ($('nameOnline').value.trim() || (isHost ? 'プレイヤー1' : 'プレイヤー2'));
         netSend({ type: 'hello', name: myName, isHost: isHost });
-        if (isHost) {
-          // Host waits for hello then starts
-        }
-      });
-      conn.on('data', (data) => onNetMessage(data));
-      conn.on('close', () => {
+      };
+      if (c.open) onOpen(); else c.on('open', onOpen);
+      c.on('data', (data) => onNetMessage(data));
+      c.on('close', () => {
+        if (conn !== c) return; // stale connection
         onlineConnected = false;
+        if (gameActive) {
+          alert('相手との接続が切れました。TOPに戻ります');
+          cleanupPeer();
+          goToTopLocal();
+          return;
+        }
+        if ($('screen-final').classList.contains('active')) {
+          $('finalNote').textContent = '相手が退出しました';
+          $('btnRematch').disabled = true;
+          return;
+        }
         const st = $('roomStatus');
         if (st) { st.textContent = '切断されました'; st.className = 'room-status err'; }
         const cs = $('onlineConnStatus');
         if (cs) { cs.textContent = '切断'; cs.className = 'room-status err'; }
+        if (mm) {
+          cleanupPeer();
+          mmStop();
+          mmUi('msg', '接続が切れました。もう一度マッチングしてください');
+        }
       });
-      conn.on('error', (err) => {
+      c.on('error', (err) => {
+        if (conn !== c) return;
         console.warn(err);
         const st = $('roomStatus');
         if (st) { st.textContent = '接続エラー'; st.className = 'room-status err'; }
@@ -944,13 +1074,12 @@
       if (!data || !data.type) return;
       switch (data.type) {
         case 'hello':
-          if (isHost) {
-            players[1] = data.name || 'プレイヤー2';
-            players[0] = $('nameOnline').value.trim() || 'プレイヤー1';
-            scores = [0, 0];
-            streak = 0;
-            speakerIdx = 0;
-            guesserIdx = 1;
+          if (isHost && !gameActive) {
+            const n0 = $('nameOnline').value.trim() || 'プレイヤー1';
+            let n1 = data.name || 'プレイヤー2';
+            if (n1 === n0) n1 += '2';
+            resetMatchState();
+            players = [n0, n1];
             updateScoreBar();
             netSend({
               type: 'start',
@@ -958,17 +1087,19 @@
               scores: scores.slice(),
               streak: streak,
               speakerIdx: speakerIdx,
-              guesserIdx: guesserIdx
+              guesserIdx: guesserIdx,
+              turnNo: turnNo
             });
             beginOnlineGame();
-          } else {
-            // guest hello already sent; wait for start
           }
           break;
         case 'start':
           players = data.players;
           scores = data.scores;
           streak = data.streak;
+          turnNo = data.turnNo || 1;
+          myRematch = false;
+          oppRematch = false;
           speakerIdx = data.speakerIdx;
           guesserIdx = data.guesserIdx;
           updateScoreBar();
@@ -979,7 +1110,7 @@
           currentStatement = data.text;
           // isTruth stays null on guesser until result
           if (myIdx === guesserIdx) {
-            showOnlineGuess();
+            startIntro();
           }
           break;
         case 'statement_host':
@@ -988,7 +1119,7 @@
           isTruth = data.isTruth;
           // Relay text-only to... wait, if guest is speaker, host is guesser
           if (myIdx === guesserIdx) {
-            showOnlineGuess();
+            startIntro();
           }
           break;
         case 'guess':
@@ -1000,20 +1131,21 @@
         case 'result':
           // Both apply result from host
           lastGuessCorrect = data.correct;
+          guessTimedOut = !!data.timeout;
           isTruth = data.isTruth;
           scores = data.scores;
           streak = data.streak;
           speakerIdx = data.speakerIdx;
           guesserIdx = data.guesserIdx;
           updateScoreBar();
-          // Play video then reveal - same as local
-          runResultSequence();
+          if (data.forfeit) showForfeit(); else runResultSequence();
           break;
         case 'next_turn':
           speakerIdx = data.speakerIdx;
           guesserIdx = data.guesserIdx;
           scores = data.scores;
           streak = data.streak;
+          if (data.turnNo) turnNo = data.turnNo;
           currentStatement = '';
           isTruth = null;
           lastGuessCorrect = false;
@@ -1025,6 +1157,17 @@
             beginOnlineGame();
           }
           break;
+        case 'forfeit':
+          // 別班(ゲスト)が時間切れ → ホストが判定
+          if (isHost) applyForfeit();
+          break;
+        case 'rematch':
+          oppRematch = true;
+          if (!myRematch && $('screen-final').classList.contains('active')) {
+            $('finalNote').textContent = '相手が再戦を希望しています';
+          }
+          tryRematchStart();
+          break;
         case 'top':
           // other player went to top
           cleanupPeer();
@@ -1035,6 +1178,7 @@
 
     function beginOnlineGame() {
       guestNextReady = false;
+      gameActive = true;
       $('scoreBar').style.display = 'flex';
       $('btnTop').classList.add('show');
       $('btnMute').classList.add('show');
@@ -1050,6 +1194,7 @@
         $('btnLie').classList.remove('selected-lie');
         $('btnSend').disabled = true;
         showScreen('screen-input');
+        startTimer('timerInput', INPUT_TIME, onInputTimeout);
       } else {
         // Waiting for statement
         $('onlineWaitTitle').textContent = '別班の入力待ち';
@@ -1062,6 +1207,7 @@
       $('guesserName').textContent = 'お前';
       $('statementDisplay').textContent = currentStatement;
       showScreen('screen-guess');
+      startGuessTimer();
     }
 
     function createRoom() {
@@ -1146,6 +1292,12 @@
     let isTruth = null;      // true = truth, false = lie
     let lastGuessCorrect = false;
     let selectedTruth = null;
+    let turnNo = 1;
+    let gameActive = false;   // online game in progress
+    let myRematch = false;
+    let oppRematch = false;
+    let guessTimedOut = false;
+    let timerId = null;
 
     // ===== Helpers =====
     function $(id) { return document.getElementById(id); }
@@ -1161,9 +1313,395 @@
       $('p1Points').textContent = scores[0];
       $('p2Points').textContent = scores[1];
       $('streak').textContent = streak;
+      $('turnLabel').textContent = 'ターン ' + Math.min(turnNo, MAX_TURNS) + '/' + MAX_TURNS;
 
       $('p1Score').classList.toggle('active', speakerIdx === 0 || guesserIdx === 0);
       $('p2Score').classList.toggle('active', speakerIdx === 1 || guesserIdx === 1);
+    }
+
+    // ===== Time limits (制限時間) =====
+    const INPUT_TIME = 45;  // 別班が入力する制限時間(秒)
+    const GUESS_TIME = 20;  // 工作員が嘘か本当か判断する制限時間(秒)
+
+    function stopTimer() {
+      clearInterval(timerId);
+      timerId = null;
+    }
+
+    function startTimer(elId, sec, onTimeout) {
+      stopTimer();
+      const el = $(elId);
+      const label = el.querySelector('b');
+      const fill = el.querySelector('.tm-fill');
+      const end = Date.now() + sec * 1000;
+      const tick = () => {
+        const rem = Math.max(0, end - Date.now());
+        label.textContent = Math.ceil(rem / 1000);
+        fill.style.width = (rem / (sec * 1000) * 100) + '%';
+        el.classList.toggle('urgent', rem <= 5000);
+        if (rem <= 0) { stopTimer(); onTimeout(); }
+      };
+      tick();
+      timerId = setInterval(tick, 200);
+    }
+
+    function startGuessTimer() {
+      startTimer('timerGuess', GUESS_TIME, () => makeGuess(null));
+    }
+
+    // 入力の時間切れ: 入力と選択が済んでいればそのまま送信、未完了なら工作員の正解扱い
+    function onInputTimeout() {
+      stopTimer();
+      const text = $('statementInput').value.trim();
+      if (text && selectedTruth !== null) { sendStatement(); return; }
+      if (playMode === 'online' && !isHost) {
+        netSend({ type: 'forfeit' });
+        $('onlineWaitTitle').textContent = '時間切れ';
+        $('onlineWaitMsg').textContent = '判定中…';
+        showScreen('screen-online-wait');
+        return;
+      }
+      applyForfeit();
+    }
+
+    function applyForfeit() {
+      lastGuessCorrect = true;
+      guessTimedOut = false;
+      scores[guesserIdx]++;
+      streak++;
+      updateScoreBar();
+      if (playMode === 'online' && isHost) {
+        netSend({
+          type: 'result',
+          forfeit: true,
+          correct: true,
+          timeout: false,
+          isTruth: null,
+          scores: scores.slice(),
+          streak: streak,
+          speakerIdx: speakerIdx,
+          guesserIdx: guesserIdx
+        });
+      }
+      showForfeit();
+    }
+
+    function showForfeit() {
+      stopTimer();
+      stopVideo();
+      overlayMode = 'result';
+      const rt = $('resultText');
+      rt.className = 'result-text correct';
+      rt.textContent = '時間切れ！';
+      $('resultSub').innerHTML = players[speakerIdx] + ' が時間内に入力できなかったため、<br>' +
+        players[guesserIdx] + ' の正解になります' + gameOverNoteHtml();
+      $('btnNext').textContent = isGameOver() ? '結果を見る' : '次へ';
+      const iw = $('resultImgWrap');
+      if (iw) iw.classList.remove('show');
+      $('overlay').classList.add('active', 'result-mode');
+    }
+
+    function gameOverNoteHtml() {
+      if (!isGameOver()) return '';
+      return '<br><strong style="color:var(--gold)">' +
+        (streak >= MAX_STREAK ? MAX_STREAK + '連続正解で即勝利！' : '最終ターン終了！') + '</strong>';
+    }
+
+    // ===== Game end rules =====
+    const MAX_TURNS = 10;   // 10ターンで終了
+    const MAX_STREAK = 5;   // 5連続で見抜いたら即勝利
+
+    function resetMatchState() {
+      scores = [0, 0];
+      streak = 0;
+      speakerIdx = 0;
+      guesserIdx = 1;
+      turnNo = 1;
+      currentStatement = '';
+      isTruth = null;
+      lastGuessCorrect = false;
+      guestNextReady = false;
+      gameActive = false;
+      myRematch = false;
+      oppRematch = false;
+      guessTimedOut = false;
+      stopTimer();
+    }
+
+    function isGameOver() {
+      return turnNo >= MAX_TURNS || streak >= MAX_STREAK;
+    }
+
+    function showFinal() {
+      gameActive = false;
+      stopTimer();
+      stopVideo();
+      $('overlay').classList.remove('active', 'result-mode');
+      $('scoreBar').style.display = 'none';
+
+      const a = scores[0], b = scores[1];
+      const winIdx = streak >= MAX_STREAK ? guesserIdx : (a === b ? -1 : (a > b ? 0 : 1));
+      $('finalReason').textContent = streak >= MAX_STREAK
+        ? players[guesserIdx] + ' が' + MAX_STREAK + '連続で見抜いて即勝利！'
+        : MAX_TURNS + 'ターン終了';
+      const w = $('finalWinner');
+      w.textContent = winIdx < 0 ? '🤝 引き分け！' : '🏆 ' + players[winIdx] + ' の勝利！';
+      w.style.animation = 'none';
+      void w.offsetWidth;
+      w.style.animation = '';
+      for (let i = 0; i < 2; i++) {
+        $('fcName' + i).textContent = players[i];
+        $('fcScore' + i).textContent = scores[i];
+        $('fc' + i).classList.toggle('win', i === winIdx);
+      }
+      const rb = $('btnRematch');
+      rb.disabled = false;
+      rb.textContent = playMode === 'online' ? 'もう一度遊ぶ(同じ相手と)' : 'もう一度遊ぶ';
+      $('finalNote').textContent = '';
+      showScreen('screen-final');
+    }
+
+    function rematch() {
+      if (playMode === 'online') {
+        if (!onlineConnected) return;
+        myRematch = true;
+        $('btnRematch').disabled = true;
+        $('btnRematch').textContent = '相手を待っています…';
+        netSend({ type: 'rematch' });
+        tryRematchStart();
+        return;
+      }
+      resetMatchState();
+      $('scoreBar').style.display = 'flex';
+      updateScoreBar();
+      goToPassForSpeaker();
+    }
+
+    function tryRematchStart() {
+      if (!(isHost && myRematch && oppRematch)) return;
+      const ps = players.slice();
+      resetMatchState();
+      players = ps;
+      updateScoreBar();
+      netSend({
+        type: 'start',
+        players: players.slice(),
+        scores: scores.slice(),
+        streak: streak,
+        speakerIdx: speakerIdx,
+        guesserIdx: guesserIdx,
+        turnNo: turnNo
+      });
+      beginOnlineGame();
+    }
+
+    // ===== Random matchmaking (世界中の人とマッチング) =====
+    // PeerJS の公開サーバーだけで動く「スロット方式」。
+    //   ・待機中のプレイヤーは固定ID(lie-bekkan-mm1-0 ~ 7)のどれかを占有して待つ
+    //   ・探す側は全スロットに接続を試み、待機中の人がいればその人と対戦
+    //   ・誰もいなければ、空いている一番若いスロットを占有して待つ
+    //   ・マッチ成立後はシグナリングを切断してスロットを解放(対戦の通信は維持される)
+    const MM_SLOTS = 8;
+    const MM_PREFIX = 'lie-bekkan-mm1-';
+    let mm = null;
+
+    function mmSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function mmUi(state, text) {
+      // state: 'idle' | 'search' | 'msg'
+      $('mmBox').classList.toggle('hidden', state === 'idle');
+      $('mmSpin').classList.toggle('hidden', state !== 'search');
+      $('mmCancel').classList.toggle('hidden', state !== 'search');
+      const st = $('mmStatus');
+      st.textContent = text || '';
+      st.className = 'room-status' + (state === 'msg' ? ' err' : '');
+      const busy = state === 'search';
+      ['btnMatch', 'btnCreate', 'btnJoinShow'].forEach(id => { $(id).disabled = busy; });
+    }
+
+    function mmStop() {
+      if (!mm) return;
+      mm.canceled = true;
+      clearInterval(mm.rescan);
+      mm.peers.forEach(p => { try { p.destroy(); } catch (e) {} });
+      mm = null;
+    }
+
+    function cancelMatchmaking() {
+      mmStop();
+      cleanupPeer();
+      mmUi('idle');
+    }
+
+    function startMatchmaking() {
+      if (mm) return;
+      if (typeof Peer === 'undefined') {
+        mmUi('msg', 'オンライン機能を読み込めませんでした。通信環境を確認してください');
+        return;
+      }
+      cleanupPeer();
+      $('hostRoomUI').classList.add('hidden');
+      $('joinUI').classList.add('hidden');
+      playMode = 'online';
+      mm = { canceled: false, matched: false, probing: false, peers: [], rescan: null };
+      mmUi('search', '世界中のプレイヤーを探しています…');
+      mmSearch(mm);
+    }
+
+    function mmMkPeer(m, id) {
+      return new Promise((resolve, reject) => {
+        let done = false;
+        const p = id ? new Peer(id, { debug: 0 }) : new Peer({ debug: 0 });
+        m.peers.push(p);
+        const to = setTimeout(() => {
+          if (done) return;
+          done = true;
+          try { p.destroy(); } catch (e) {}
+          reject({ type: 'timeout' });
+        }, 10000);
+        p.on('open', () => { if (done) return; done = true; clearTimeout(to); resolve(p); });
+        p.on('error', (e) => {
+          if (done) return;
+          done = true;
+          clearTimeout(to);
+          try { p.destroy(); } catch (_) {}
+          reject(e || { type: 'unknown' });
+        });
+      });
+    }
+
+    // slotId に接続して参加を申し込む。
+    // 戻り値: {reason:'ok', conn} | {reason:'empty'}(誰もいない) | {reason:'busy'}(満員/応答なし)
+    function mmProbe(p, slotId) {
+      return new Promise((resolve) => {
+        let settled = false;
+        let c = null;
+        const t = setTimeout(() => done({ reason: 'busy' }), 6000);
+        const onErr = (e) => { if (e && e.type === 'peer-unavailable') done({ reason: 'empty' }); };
+        const done = (r) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(t);
+          try { p.off('error', onErr); } catch (e) {}
+          if (r.reason !== 'ok') { try { c && c.close(); } catch (e) {} }
+          resolve(r);
+        };
+        p.on('error', onErr);
+        try { c = p.connect(slotId, { reliable: true }); } catch (e) { done({ reason: 'busy' }); return; }
+        c.on('open', () => { try { c.send({ type: 'mm_join' }); } catch (e) {} });
+        c.on('data', (d) => {
+          if (!d) return;
+          if (d.type === 'mm_ok') done({ reason: 'ok', conn: c });
+          else if (d.type === 'mm_busy') done({ reason: 'busy' });
+        });
+        c.on('close', () => done({ reason: 'busy' }));
+        c.on('error', () => done({ reason: 'busy' }));
+      });
+    }
+
+    async function mmSearch(m) {
+      while (!m.canceled) {
+        let probePeer = null;
+        try {
+          probePeer = await mmMkPeer(m, null);
+          if (m.canceled) return;
+          peer = probePeer;
+          let freeSlot = -1;
+          for (let i = 0; i < MM_SLOTS && !m.canceled; i++) {
+            const r = await mmProbe(probePeer, MM_PREFIX + i);
+            if (m.canceled) return;
+            if (r.reason === 'ok') { mmMatched(m, false, r.conn); return; }
+            if (r.reason === 'empty' && freeSlot < 0) freeSlot = i;
+          }
+          if (m.canceled) return;
+          try { probePeer.destroy(); } catch (e) {}
+          if (freeSlot < 0) { await mmSleep(2000); continue; } // 全スロット使用中 → 再試行
+
+          // 待機スロットを占有
+          let slotPeer;
+          try {
+            slotPeer = await mmMkPeer(m, MM_PREFIX + freeSlot);
+          } catch (e) {
+            if (e && e.type === 'unavailable-id') continue; // 直前に取られた → 探し直し
+            throw e;
+          }
+          if (m.canceled) return;
+          peer = slotPeer;
+          mmHostWait(m, slotPeer, freeSlot);
+          return;
+        } catch (e) {
+          if (m.canceled) return;
+          console.warn(e);
+          mmUi('search', 'サーバーに接続中…(再試行します)');
+          try { probePeer && probePeer.destroy(); } catch (_) {}
+          await mmSleep(2500);
+        }
+      }
+    }
+
+    function mmHostWait(m, p, slot) {
+      mmUi('search', '世界中のプレイヤーを探しています…');
+
+      p.on('connection', (c) => {
+        let handled = false;
+        const refuse = () => {
+          try { c.send({ type: 'mm_busy' }); } catch (e) {}
+          setTimeout(() => { try { c.close(); } catch (e) {} }, 400);
+        };
+        c.on('data', (d) => {
+          if (handled || !d || d.type !== 'mm_join') return;
+          handled = true;
+          if (m.canceled || m.matched || m.probing) { refuse(); return; }
+          m.matched = true;
+          try { c.send({ type: 'mm_ok' }); } catch (e) {}
+          mmMatched(m, true, c);
+        });
+      });
+
+      p.on('disconnected', () => {
+        if (!m.canceled && !m.matched) { try { p.reconnect(); } catch (e) {} }
+      });
+      p.on('error', (e) => {
+        if (m.canceled || m.matched) return;
+        if (e && e.type === 'peer-unavailable') return; // rescan中の空きスロット
+        console.warn(e);
+        clearInterval(m.rescan);
+        try { p.destroy(); } catch (_) {}
+        mmSearch(m);
+      });
+
+      // 自分より若いスロットに待機者が現れていないか定期的に確認(すれ違い防止)
+      if (slot > 0) {
+        m.rescan = setInterval(async () => {
+          if (m.canceled || m.matched || m.probing) return;
+          m.probing = true; // 確認中は他の人の参加を断る
+          try {
+            for (let j = 0; j < slot; j++) {
+              if (m.canceled || m.matched) break;
+              const r = await mmProbe(p, MM_PREFIX + j);
+              if (r.reason === 'ok') {
+                if (m.canceled) { try { r.conn.close(); } catch (e) {} break; }
+                mmMatched(m, false, r.conn);
+                break;
+              }
+            }
+          } finally {
+            m.probing = false;
+          }
+        }, 5000);
+      }
+    }
+
+    function mmMatched(m, asHost, c) {
+      m.matched = true;
+      clearInterval(m.rescan);
+      isHost = asHost;
+      myIdx = asHost ? 0 : 1;
+      playMode = 'online';
+      mmUi('search', '対戦相手が見つかりました！接続中…');
+      setupConnection(c);
+      // スロットを解放(すでに開いた対戦用の通信はそのまま使える)
+      try { if (peer && !peer.disconnected) peer.disconnect(); } catch (e) {}
     }
 
     // ===== Start =====
@@ -1172,10 +1710,7 @@
       const n1 = $('name1').value.trim() || 'プレイヤー1';
       const n2 = $('name2').value.trim() || 'プレイヤー2';
       players = [n1, n2];
-      scores = [0, 0];
-      streak = 0;
-      speakerIdx = 0;
-      guesserIdx = 1;
+      resetMatchState();
       $('scoreBar').style.display = 'flex';
       $('btnTop').classList.add('show');
       $('btnMute').classList.add('show');
@@ -1196,15 +1731,11 @@
       try { stopVideo(); } catch (e) {}
       const ov = $('overlay');
       if (ov) ov.classList.remove('active', 'result-mode');
-      scores = [0, 0];
-      streak = 0;
-      speakerIdx = 0;
-      guesserIdx = 1;
-      currentStatement = '';
-      isTruth = null;
-      lastGuessCorrect = false;
+      resetMatchState();
       selectedTruth = null;
-      playMode = playMode; // keep last mode selection
+      mmStop();
+      mmUi('idle');
+      stopTimer();
       $('scoreBar').style.display = 'none';
       $('btnTop').classList.remove('show');
       $('btnMute').classList.remove('show');
@@ -1235,6 +1766,7 @@
       $('btnLie').classList.remove('selected-lie');
       $('btnSend').disabled = true;
       showScreen('screen-input');
+      startTimer('timerInput', INPUT_TIME, onInputTimeout);
     }
 
     function setTruth(val) {
@@ -1252,6 +1784,7 @@
     $('statementInput').addEventListener('input', checkSendReady);
 
     function sendStatement() {
+      stopTimer();
       currentStatement = $('statementInput').value.trim();
       isTruth = selectedTruth;
       if (!currentStatement || isTruth === null) return;
@@ -1264,9 +1797,7 @@
           // Guest is speaker: send full data to host
           netSend({ type: 'statement_host', text: currentStatement, isTruth: isTruth });
         }
-        $('onlineWaitTitle').textContent = '工作員の判定待ち';
-        $('onlineWaitMsg').textContent = players[guesserIdx] + ' が判定しています…';
-        showScreen('screen-online-wait');
+        startIntro();
         return;
       }
 
@@ -1417,8 +1948,11 @@
     function showGuessScreen() {
       $('guesserName').textContent = 'お前';
       $('statementDisplay').textContent = currentStatement;
+      startIntro();
+    }
 
-      // 冒頭ムービーを流してから選択画面(嘘か本当か)を出す
+    function startIntro() {
+      // 冒頭ムービーを流してから選択画面(嘘か本当か)を出す(オンラインは両者に流す)
       overlayMode = 'intro';
       $('resultText').className = 'result-text';
       $('resultText').textContent = '';
@@ -1434,7 +1968,18 @@
       stopVideo();
       $('overlay').classList.remove('active', 'result-mode');
       resumeBgm();
-      showScreen('screen-guess');
+      if (playMode === 'online') {
+        if (myIdx === guesserIdx) {
+          showOnlineGuess();
+        } else {
+          $('onlineWaitTitle').textContent = '工作員の判定待ち';
+          $('onlineWaitMsg').textContent = players[guesserIdx] + ' が判定しています…';
+          showScreen('screen-online-wait');
+        }
+      } else {
+        showScreen('screen-guess');
+        startGuessTimer();
+      }
     }
 
     // ===== Guess =====
@@ -1456,7 +2001,7 @@
       try { mv.pause(); } catch (e) {}
       $('countdown').classList.remove('show', 'pop');
       $('countdown').textContent = '';
-      $('btnNext').textContent = '次へ';
+      $('btnNext').textContent = isGameOver() ? '結果を見る' : '次へ';
 
       const imgWrap = $('resultImgWrap');
       const img = $('resultImg');
@@ -1473,12 +2018,13 @@
           ? '本当だったようだ、よく見抜いたな'
           : '嘘だったようだ、よく見抜いたな';
       } else {
-        resultText.textContent = '不正解…';
+        resultText.textContent = guessTimedOut ? '時間切れ…' : '不正解…';
         resultText.classList.add('wrong');
         resultSub.textContent = isTruth
           ? '本当だったようだ、しくじったな'
           : '嘘だったようだ、しくじったな';
       }
+      resultSub.innerHTML += gameOverNoteHtml();
 
       // 画像準備ができてから、1フレームで結果を出す（黒フレームを挟まない）
       const show = () => {
@@ -1500,6 +2046,7 @@
     }
 
     function makeGuess(guessIsTruth) {
+      stopTimer();
       if (playMode === 'online') {
         if (isHost) {
           // Host is guesser and has isTruth
@@ -1519,6 +2066,7 @@
     function applyGuess(guessIsTruth) {
       // guessIsTruth: true = pressed "本当", false = pressed "嘘"
       lastGuessCorrect = (guessIsTruth === isTruth);
+      guessTimedOut = (guessIsTruth === null); // 時間切れ = 不正解
 
       // Score is settled immediately (so skipping can never change it)
       if (lastGuessCorrect) {
@@ -1534,6 +2082,7 @@
         netSend({
           type: 'result',
           correct: lastGuessCorrect,
+          timeout: guessTimedOut,
           isTruth: isTruth,
           scores: scores.slice(),
           streak: streak,
@@ -1545,6 +2094,7 @@
     }
 
     function runResultSequence() {
+      stopTimer();
       overlayMode = 'result';
       $('resultText').className = 'result-text';
       $('resultText').textContent = '';
@@ -1583,27 +2133,30 @@
       const _iw = $('resultImgWrap');
       if (_iw) { _iw.classList.remove('show'); $('resultImg').removeAttribute('src'); }
 
-      if (!lastGuessCorrect) {
-        // Switch roles
-        const tmp = speakerIdx;
-        speakerIdx = guesserIdx;
-        guesserIdx = tmp;
+      // 10ターン終了 or 3連続正解 → スコア画面
+      if (isGameOver()) {
+        showFinal();
+        return;
       }
-      updateScoreBar();
 
       if (playMode === 'online') {
         if (isHost) {
+          // ターン進行はホストが決める(ゲストはnext_turnで同期)
+          turnNo++;
+          if (!lastGuessCorrect) {
+            const tmp = speakerIdx;
+            speakerIdx = guesserIdx;
+            guesserIdx = tmp;
+          }
+          updateScoreBar();
           netSend({
             type: 'next_turn',
             speakerIdx: speakerIdx,
             guesserIdx: guesserIdx,
             scores: scores.slice(),
-            streak: streak
+            streak: streak,
+            turnNo: turnNo
           });
-        }
-        // Both sides: host advances immediately; guest waits for next_turn
-        // If guest, next_turn handler calls beginOnlineGame
-        if (isHost) {
           currentStatement = '';
           isTruth = null;
           lastGuessCorrect = false;
@@ -1621,6 +2174,14 @@
         return;
       }
 
+      // Local
+      turnNo++;
+      if (!lastGuessCorrect) {
+        const tmp = speakerIdx;
+        speakerIdx = guesserIdx;
+        guesserIdx = tmp;
+      }
+      updateScoreBar();
       goToPassForSpeaker();
     }
 
@@ -1632,6 +2193,8 @@
         im.src = RESULT_IMG[k];
       });
     })();
+    $('ruleIn').textContent = INPUT_TIME;
+    $('ruleGu').textContent = GUESS_TIME;
     showScreen('screen-start');
   </script>
 </body>
