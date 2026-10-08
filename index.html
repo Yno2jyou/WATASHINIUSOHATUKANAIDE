@@ -858,6 +858,93 @@
       background: rgba(200,50,42,0.1);
     }
     .btn-topic:active { transform: scale(0.98); }
+
+    .topic-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    .topic-row .btn-topic {
+      flex: 1;
+      margin-top: 0;
+    }
+    .btn-tip {
+      flex: 0 0 48px;
+      padding: 0;
+      border: 1px solid #2e2e2e;
+      border-radius: 2px;
+      background: #080808;
+      color: var(--accent);
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-tip:hover, .btn-tip.open {
+      border-color: var(--accent);
+      background: rgba(200,50,42,0.12);
+    }
+    .btn-tip:active { transform: scale(0.95); }
+    .icon-bulb {
+      display: block;
+      stroke: var(--accent);
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .btn-tip.open .icon-bulb {
+      stroke: var(--accent);
+      fill: rgba(200,50,42,0.15);
+    }
+    .tip-panel {
+      display: none;
+      width: 100%;
+      margin-top: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      background: #000;
+      border: 1px solid #2a2a2a;
+      border-left: 4px solid var(--gold);
+      padding: 12px 14px;
+      text-align: left;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tip-panel.open { display: block; animation: fadeIn 0.25s ease; }
+    .tip-panel h4 {
+      font-size: 0.78rem;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      margin: 10px 0 4px;
+    }
+    .tip-panel h4:first-child { margin-top: 0; }
+    .tip-panel ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .tip-panel li {
+      font-size: 0.78rem;
+      color: var(--text);
+      line-height: 1.55;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .tip-panel li span {
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+    .tip-panel .tip-note {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
   </style>
 </head>
 <body>
@@ -982,7 +1069,49 @@
         <div class="timer" id="timerInput"><div class="tm-label">残り <b></b>秒</div><div class="tm-track"><div class="tm-fill"></div></div></div>
         <p class="instruction"><strong id="inputPlayerName">あなた</strong>（別班）の番だ。<br>嘘か本当かわからないことを入力せよ</p>
         <textarea id="statementInput" placeholder="自分で考えてもOK／お題を使ってもOK" maxlength="80"></textarea>
-        <button type="button" class="btn-topic" id="btnTopic" onclick="fillRandomTopic()">お題をランダム</button>
+        <div class="topic-row">
+          <button type="button" class="btn-topic" id="btnTopic" onclick="fillRandomTopic()">お題をランダム</button>
+          <button type="button" class="btn-tip" id="btnTip" onclick="toggleTopicTips()" aria-label="お題のヒント" title="お題のヒント"><svg class="icon-bulb" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10c.6.6 1 1.4 1 2.2V17h6v-1.8c0-.8.4-1.6 1-2.2A6 6 0 0 0 12 3z"/></svg></button>
+        </div>
+        <div class="tip-panel" id="tipPanel">
+          <h4>好み・趣味</h4>
+          <ul>
+            <li>私は〇〇が好きだ <span>例：カレー／ホラー／猫</span></li>
+            <li>私は〇〇が苦手だ <span>例：パクチー／高いところ</span></li>
+            <li>私は〇〇より△△派だ <span>例：焼肉より寿司</span></li>
+            <li>私は〇〇をよくする <span>例：夜更かし／一人カラオケ</span></li>
+            <li>私は〇〇にハマっている <span>例：筋トレ／パズル</span></li>
+          </ul>
+          <h4>経験・あるある</h4>
+          <ul>
+            <li>私は〇〇したことがある <span>例：海外旅行／告白／徹夜</span></li>
+            <li>私は〇〇したことがない <span>例：飛行機に乗る</span></li>
+            <li>私は〇〇をなくしたことがある <span>例：財布／鍵</span></li>
+            <li>私は〇〇で失敗したことがある <span>例：料理／発表</span></li>
+          </ul>
+          <h4>習慣・日常</h4>
+          <ul>
+            <li>私は〇〇するほうだ <span>例：早起き／衝動買い</span></li>
+            <li>私は〇〇が多い <span>例：忘れ物／独り言</span></li>
+            <li>私は毎日〇〇する <span>例：水を飲む／音楽</span></li>
+            <li>私は〇〇をほとんどしない <span>例：料理／運動</span></li>
+          </ul>
+          <h4>性格・本音（割れやすい）</h4>
+          <ul>
+            <li>私は実はかなり〇〇だ <span>例：朝型／寂しがり屋</span></li>
+            <li>私は意外と〇〇だ <span>例：頑固／怖がり</span></li>
+            <li>私は〇〇のが得意／苦手だ <span>例：人の顔を覚える</span></li>
+            <li>私には誰にも言っていない〇〇がある <span>例：秘密／夢</span></li>
+          </ul>
+          <h4>比較・価値観</h4>
+          <ul>
+            <li>私は〇〇と△△なら〇〇を選ぶ</li>
+            <li>私は〇〇より△△を大切にする <span>例：お金より時間</span></li>
+            <li>私はいつか〇〇してみたい <span>例：海外に住む</span></li>
+            <li>私は〇〇だと思う <span>例：努力は裏切らない</span></li>
+          </ul>
+          <p class="tip-note">〇〇を自分で埋めて文を作ろう。短く（20〜40字）・本人にしか分からないことが狙い目。</p>
+        </div>
         <p class="instruction" style="font-size:0.85rem; margin-top:4px;">これは…</p>
         <div class="truth-toggle">
           <button type="button" id="btnTruth" onclick="setTruth(true)">本当</button>
@@ -1968,6 +2097,22 @@
       checkSendReady();
     }
 
+    function toggleTopicTips() {
+      const panel = $('tipPanel');
+      const btn = $('btnTip');
+      if (!panel) return;
+      const open = panel.classList.toggle('open');
+      if (btn) btn.classList.toggle('open', open);
+    }
+    function closeTopicTips() {
+      const panel = $('tipPanel');
+      const btn = $('btnTip');
+      if (panel) panel.classList.remove('open');
+      if (btn) btn.classList.remove('open');
+    }
+
+
+
     // ===== State =====
     let players = ['プレイヤー1', 'プレイヤー2'];
     let scores = [0, 0];
@@ -2420,6 +2565,7 @@
     }
 
     function goToTopLocal() {
+      try { closeTopicTips(); } catch (e) {}
       try { stopVideo(); } catch (e) {}
       const ov = $('overlay');
       if (ov) ov.classList.remove('active', 'result-mode');
@@ -2476,6 +2622,7 @@
     $('statementInput').addEventListener('input', checkSendReady);
 
     function sendStatement() {
+      closeTopicTips();
       stopTimer();
       currentStatement = $('statementInput').value.trim();
       isTruth = selectedTruth;
