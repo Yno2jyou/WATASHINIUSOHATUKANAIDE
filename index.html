@@ -2967,18 +2967,22 @@
       stopVideo();
       pauseBgm();
 
-      // 結果ムービーは正解/不正解で決まる（金だ！＋カウントダウンを確実に流す）:
-      //   正解（本当/嘘どちらでも） → kinuso（金だ！→私に嘘はつけないで）
-      //   不正解・時間切れ           → kinkan（金だ！→勘違いするなよ）
-      // ※本当正解用の hontou は短いため、金だ！パートが無い。
-      //   金だ！＋カウントダウンを優先して常に kinuso を使う。
-      //   （hontou を金だ！付きに結合した動画ができたら SEQ.hontou に差し替え可能）
+      // 結果ムービーは正解/不正解 + 真偽で決まる:
+      //   本当を見抜いて正解 → hontou（短い殴打シーン）
+      //   嘘を見抜いて正解   → kinuso（金だ！→私に嘘はつけないで）
+      //   不正解・時間切れ   → kinkan（金だ！→勘違いするなよ）
       // その後 revealResult で短い結果ボイスムービーを流す
-      const seq = lastGuessCorrect ? SEQ.uso : SEQ.kanchigai;
+      const seq = lastGuessCorrect
+        ? (isTruth ? SEQ.hontou : SEQ.uso)
+        : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode');
       $('overlay').classList.add('active');
-      playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
+      // 短い hontou は safety を短めに。join が小さいのでカウントダウンは動画尺に合わせて出る
+      const safety = seq.key === 'hontou' ? 8000 : 40000;
+      playSequence([seq.key], revealResult, safety, () => {
+        if (seq.join > 0) startCountdownWatch(seq.join);
+      });
     }
 
     function afterResult() {
