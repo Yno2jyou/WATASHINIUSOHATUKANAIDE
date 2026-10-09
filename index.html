@@ -1211,9 +1211,9 @@
     const SEQ = {
       uso:       { key: 'kinuso', join: 11.683 },
       kanchigai: { key: 'kinkan', join: 11.483 },
-      // 本当 + 正解: kinuso の『金だ！』パート(0〜cut秒)だけ流して hontou.mp4 に切り替える
+      // 本当 + 正解: 不正解時と同じ kinkan の『金だ！』パートを、不正解時と同じ切り替わり時刻(join)まで流して hontou.mp4 に切り替える
       // 切り替え位置を微調整したいときは cut を変更(秒)
-      hontou:    { key: 'kinuso', join: 11.683, cut: 11.683, next: 'hontou' }
+      hontou:    { key: 'kinkan', join: 11.483, cut: 11.483, next: 'hontou' }
     };
     function videoUrl(key) {
       return VIDEO_FILES[key] || '';
@@ -2994,7 +2994,7 @@
       //   正解 → kinuso / 不正解・時間切れ → kinkan
       // その後 revealResult で短い結果ボイスムービーを流す
       // 長いムービーが無い場合でも onerror で revealResult に進む
-      //   本当 + 正解 → kinuso の『金だ！』パート → hontou
+      //   本当 + 正解 → kinkan の『金だ！』パート(不正解時と同じ切り替え時刻まで) → hontou
       const seq = lastGuessCorrect ? (isTruth === true ? SEQ.hontou : SEQ.uso) : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode');
