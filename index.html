@@ -1197,9 +1197,8 @@
   <script>
     // ===== Result videos (embedded, H.264/MP4) =====
     // intro: 冒頭(選択画面の前)
-    // kinuso : 『金だ！』→『私に嘘はつけないでー』を1本に編集(つなぎ目は0.25秒のクロスフェード) ※嘘を見抜いて正解
-    // kinkan : 『金だ！』→『勘違いするなよ』を1本に編集(つなぎ目は0.25秒のクロスフェード) ※不正解
-    // hontou : 本当を見抜いて正解用の短いシーン
+    // kinuso : 『金だ！』→『私に嘘はつけないでー』を1本に編集(つなぎ目は0.25秒のクロスフェード)
+    // kinkan : 『金だ！』→『勘違いするなよ』を1本に編集(つなぎ目は0.25秒のクロスフェード)
     // join   : 『金だ！』パートが終わって次のムービーに切り替わる時刻(秒)。カウントダウンはこの3秒前から
     const VIDEO_FILES = {
       intro:  'intro.mp4',
@@ -1212,7 +1211,9 @@
     const SEQ = {
       uso:       { key: 'kinuso', join: 11.683 },
       kanchigai: { key: 'kinkan', join: 11.483 },
-      hontou:    { key: 'hontou', join: 2.5 }
+      // 本当 + 正解: kinuso の『金だ！』パート(0〜cut秒)だけ流して hontou.mp4 に切り替える
+      // 切り替え位置を微調整したいときは cut を変更(秒)
+      hontou:    { key: 'kinuso', join: 11.683, cut: 11.683, next: 'hontou' }
     };
     function videoUrl(key) {
       return VIDEO_FILES[key] || '';
@@ -2654,6 +2655,12 @@
     let resultTimer = null;
     let overlayMode = 'result'; // 'intro' | 'result'
 
+    let cutWatch = null;
+    function stopCutWatch() {
+      clearInterval(cutWatch);
+      cutWatch = null;
+    }
+
     let cdWatch = null;
     function stopCountdownWatch() {
       clearInterval(cdWatch);
@@ -2714,6 +2721,7 @@
     }
 
     function stopVideo() {
+      stopCutWatch();
       stopCountdownWatch();
       clearTimeout(seqTimer);
       clearTimeout(cdTimer);
@@ -2730,7 +2738,8 @@
 
     // keys を順に連続再生し、全部終わる(またはエラー)と onEnd を呼ぶ
     // ソース切替時の黒画面を減らすため、次クリップを先読みしてから切替える
-    function playSequence(keys, onEnd, safetyMs, onClip) {
+    // cuts: { クリップkey: 秒 } を渡すと、そのクリップは指定秒で打ち切って次のクリップへ進む
+    function playSequence(keys, onEnd, safetyMs, onClip, cuts) {
       const mv = $('mv');
       ensureInlineVideo(mv);
       let qi = 0;
@@ -2741,6 +2750,7 @@
         mv.onended = null;
         mv.onerror = null;
         mv.onloadeddata = null;
+        stopCutWatch();
         clearTimeout(seqTimer);
         try { onEnd(); } catch (e) { console.warn(e); }
       };
@@ -2762,6 +2772,7 @@
       };
       const loadAndPlay = (idx) => {
         if (finished) return;
+        stopCutWatch();
         ensureInlineVideo(mv);
         const url = videoUrl(keys[idx]);
         if (!url) {
@@ -2780,6 +2791,18 @@
           mv.onloadeddata = null;
           if (onClip) onClip(idx);
           playNow();
+          // 指定秒で打ち切り(ended と同じ扱いで次のクリップへ)
+          const cutAt = cuts && cuts[keys[idx]];
+          if (cutAt) {
+            stopCutWatch();
+            cutWatch = setInterval(() => {
+              if (finished) { stopCutWatch(); return; }
+              if (mv.currentTime >= cutAt) {
+                stopCutWatch();
+                if (mv.onended) mv.onended();
+              }
+            }, 25);
+          }
         };
 
         // エラー時は次のクリップへ（ファイル欠損など）
@@ -2967,22 +2990,24 @@
       stopVideo();
       pauseBgm();
 
-      // 結果ムービーは正解/不正解 + 真偽で決まる:
-      //   本当を見抜いて正解 → hontou（短い殴打シーン）
-      //   嘘を見抜いて正解   → kinuso（金だ！→私に嘘はつけないで）
-      //   不正解・時間切れ   → kinkan（金だ！→勘違いするなよ）
+      // 結果ムービーは正解/不正解で決まる:
+      //   正解 → kinuso / 不正解・時間切れ → kinkan
       // その後 revealResult で短い結果ボイスムービーを流す
-      const seq = lastGuessCorrect
-        ? (isTruth ? SEQ.hontou : SEQ.uso)
-        : SEQ.kanchigai;
+      // 長いムービーが無い場合でも onerror で revealResult に進む
+      //   本当 + 正解 → kinuso の『金だ！』パート → hontou
+      const seq = lastGuessCorrect ? (isTruth === true ? SEQ.hontou : SEQ.uso) : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode');
       $('overlay').classList.add('active');
-      // 短い hontou は safety を短めに。join が小さいのでカウントダウンは動画尺に合わせて出る
-      const safety = seq.key === 'hontou' ? 8000 : 40000;
-      playSequence([seq.key], revealResult, safety, () => {
-        if (seq.join > 0) startCountdownWatch(seq.join);
-      });
+      if (seq.next) {
+        // 『金だ！』パートだけ流して次のムービーへ(カウントダウンは最初のクリップ中のみ)
+        const cuts = {}; cuts[seq.key] = seq.cut;
+        playSequence([seq.key, seq.next], revealResult, 40000, (i) => {
+          if (i === 0) startCountdownWatch(seq.join); else stopCountdownWatch();
+        }, cuts);
+      } else {
+        playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
+      }
     }
 
     function afterResult() {
