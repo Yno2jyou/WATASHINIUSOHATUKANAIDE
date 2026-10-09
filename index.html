@@ -1204,16 +1204,15 @@
       intro:  'intro.mp4',
       kinuso: 'kinuso.mp4',
       kinkan: 'kinkan.mp4',
-      hontou: 'hontou.mp4',
+      hontou: 'kinhontou.mp4',
       resultCorrect: 'result-correct.mp4',
       resultWrong:   'result-wrong.mp4'
     };
     const SEQ = {
       uso:       { key: 'kinuso', join: 11.683 },
       kanchigai: { key: 'kinkan', join: 11.483 },
-      // 本当 + 正解: 不正解時と同じ kinkan の『金だ！』パートを、不正解時と同じ切り替わり時刻(join)まで流して hontou.mp4 に切り替える
-      // 切り替え位置を微調整したいときは cut を変更(秒)
-      hontou:    { key: 'kinkan', join: 11.483, cut: 11.483, next: 'hontou' }
+      // 本当 + 正解: 『金だ！』→(短いシーン)→『ふざけんな』を1本に編集したもの(つなぎ目は0.25秒のクロスフェード)
+      hontou:    { key: 'hontou', join: 11.483 }
     };
     function videoUrl(key) {
       return VIDEO_FILES[key] || '';
@@ -2655,12 +2654,6 @@
     let resultTimer = null;
     let overlayMode = 'result'; // 'intro' | 'result'
 
-    let cutWatch = null;
-    function stopCutWatch() {
-      clearInterval(cutWatch);
-      cutWatch = null;
-    }
-
     let cdWatch = null;
     function stopCountdownWatch() {
       clearInterval(cdWatch);
@@ -2721,7 +2714,6 @@
     }
 
     function stopVideo() {
-      stopCutWatch();
       stopCountdownWatch();
       clearTimeout(seqTimer);
       clearTimeout(cdTimer);
@@ -2738,8 +2730,7 @@
 
     // keys を順に連続再生し、全部終わる(またはエラー)と onEnd を呼ぶ
     // ソース切替時の黒画面を減らすため、次クリップを先読みしてから切替える
-    // cuts: { クリップkey: 秒 } を渡すと、そのクリップは指定秒で打ち切って次のクリップへ進む
-    function playSequence(keys, onEnd, safetyMs, onClip, cuts) {
+    function playSequence(keys, onEnd, safetyMs, onClip) {
       const mv = $('mv');
       ensureInlineVideo(mv);
       let qi = 0;
@@ -2750,7 +2741,6 @@
         mv.onended = null;
         mv.onerror = null;
         mv.onloadeddata = null;
-        stopCutWatch();
         clearTimeout(seqTimer);
         try { onEnd(); } catch (e) { console.warn(e); }
       };
@@ -2772,7 +2762,6 @@
       };
       const loadAndPlay = (idx) => {
         if (finished) return;
-        stopCutWatch();
         ensureInlineVideo(mv);
         const url = videoUrl(keys[idx]);
         if (!url) {
@@ -2791,18 +2780,6 @@
           mv.onloadeddata = null;
           if (onClip) onClip(idx);
           playNow();
-          // 指定秒で打ち切り(ended と同じ扱いで次のクリップへ)
-          const cutAt = cuts && cuts[keys[idx]];
-          if (cutAt) {
-            stopCutWatch();
-            cutWatch = setInterval(() => {
-              if (finished) { stopCutWatch(); return; }
-              if (mv.currentTime >= cutAt) {
-                stopCutWatch();
-                if (mv.onended) mv.onended();
-              }
-            }, 25);
-          }
         };
 
         // エラー時は次のクリップへ（ファイル欠損など）
@@ -2994,20 +2971,12 @@
       //   正解 → kinuso / 不正解・時間切れ → kinkan
       // その後 revealResult で短い結果ボイスムービーを流す
       // 長いムービーが無い場合でも onerror で revealResult に進む
-      //   本当 + 正解 → kinkan の『金だ！』パート(不正解時と同じ切り替え時刻まで) → hontou
+      //   本当 + 正解 → hontou(『金だ！』→短いシーン→『ふざけんな』の編集版)
       const seq = lastGuessCorrect ? (isTruth === true ? SEQ.hontou : SEQ.uso) : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode');
       $('overlay').classList.add('active');
-      if (seq.next) {
-        // 『金だ！』パートだけ流して次のムービーへ(カウントダウンは最初のクリップ中のみ)
-        const cuts = {}; cuts[seq.key] = seq.cut;
-        playSequence([seq.key, seq.next], revealResult, 40000, (i) => {
-          if (i === 0) startCountdownWatch(seq.join); else stopCountdownWatch();
-        }, cuts);
-      } else {
-        playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
-      }
+      playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
     }
 
     function afterResult() {
