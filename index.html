@@ -1197,19 +1197,22 @@
   <script>
     // ===== Result videos (embedded, H.264/MP4) =====
     // intro: 冒頭(選択画面の前)
-    // kinuso : 『金だ！』→『私に嘘はつけないでー』を1本に編集(つなぎ目は0.25秒のクロスフェード)
-    // kinkan : 『金だ！』→『勘違いするなよ』を1本に編集(つなぎ目は0.25秒のクロスフェード)
+    // kinuso : 『金だ！』→『私に嘘はつけないでー』を1本に編集(つなぎ目は0.25秒のクロスフェード) ※嘘を見抜いて正解
+    // kinkan : 『金だ！』→『勘違いするなよ』を1本に編集(つなぎ目は0.25秒のクロスフェード) ※不正解
+    // hontou : 本当を見抜いて正解用の短いシーン
     // join   : 『金だ！』パートが終わって次のムービーに切り替わる時刻(秒)。カウントダウンはこの3秒前から
     const VIDEO_FILES = {
       intro:  'intro.mp4',
       kinuso: 'kinuso.mp4',
       kinkan: 'kinkan.mp4',
+      hontou: 'hontou.mp4',
       resultCorrect: 'result-correct.mp4',
       resultWrong:   'result-wrong.mp4'
     };
     const SEQ = {
       uso:       { key: 'kinuso', join: 11.683 },
-      kanchigai: { key: 'kinkan', join: 11.483 }
+      kanchigai: { key: 'kinkan', join: 11.483 },
+      hontou:    { key: 'hontou', join: 2.5 }
     };
     function videoUrl(key) {
       return VIDEO_FILES[key] || '';
@@ -1217,7 +1220,7 @@
 
     // 起動時に全ムービーを先読み
     function warmUpVideos() {
-      ['intro', 'kinuso', 'kinkan', 'resultCorrect', 'resultWrong'].forEach(key => {
+      ['intro', 'kinuso', 'kinkan', 'hontou', 'resultCorrect', 'resultWrong'].forEach(key => {
         try {
           const url = videoUrl(key);
           if (!url) return;
@@ -2964,15 +2967,21 @@
       stopVideo();
       pauseBgm();
 
-      // 結果ムービーは正解/不正解で決まる:
-      //   正解 → kinuso / 不正解・時間切れ → kinkan
+      // 結果ムービーは正解/不正解 + 真偽で決まる:
+      //   本当を見抜いて正解 → hontou
+      //   嘘を見抜いて正解   → kinuso（私に嘘はつけないで）
+      //   不正解・時間切れ   → kinkan（勘違いするなよ）
       // その後 revealResult で短い結果ボイスムービーを流す
       // 長いムービーが無い場合でも onerror で revealResult に進む
-      const seq = lastGuessCorrect ? SEQ.uso : SEQ.kanchigai;
+      const seq = lastGuessCorrect
+        ? (isTruth ? SEQ.hontou : SEQ.uso)
+        : SEQ.kanchigai;
 
       $('overlay').classList.remove('result-mode');
       $('overlay').classList.add('active');
-      playSequence([seq.key], revealResult, 40000, () => startCountdownWatch(seq.join));
+      // 短い動画(hontou)は safety を短めに、カウントダウンも join に合わせる
+      const safety = seq.key === 'hontou' ? 8000 : 40000;
+      playSequence([seq.key], revealResult, safety, () => startCountdownWatch(seq.join));
     }
 
     function afterResult() {
